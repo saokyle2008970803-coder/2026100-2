@@ -1,0 +1,219 @@
+// 全域變數宣告
+let questions = [];          // 儲存所有題目資料
+let currentQuestion = 0;     // 當前正在進行的題號 (0 ~ 4)
+let score = 0;               // 累計答對題數
+let selectedOption = -1;     // 使用者點選的選項索引 (-1 表示尚未選擇)
+let isAnswered = false;      // 紀錄當前題目是否已回答
+let nextButton;              // 「下一題」按鈕物件
+let restartButton;           // 「重新開始」按鈕物件
+let bounceOffset = 0;        // 正確選項跳動的 Y 軸偏移量
+
+function setup() {
+  // 建立全螢幕畫布
+  createCanvas(windowWidth, windowHeight);
+  // 設定文字對齊方式與基礎大小
+  textAlign(CENTER, CENTER);
+  
+  // 初始化 5 題 p5.js 基礎觀念題目
+  questions = [
+    {
+      question: "1. 在 p5.js 中，哪一個函式只會在程式啟動時執行一次？",
+      options: ["draw()", "setup()", "createCanvas()", "mousePressed()"],
+      answer: 1 // 正確答案索引 (setup)
+    },
+    {
+      question: "2. 設定畫布大小為 800x600 的正確指令為何？",
+      options: ["size(800, 600)", "windowSize(800, 600)", "createCanvas(800, 600)", "setCanvas(800, 600)"],
+      answer: 2 // 正確答案索引 (createCanvas)
+    },
+    {
+      question: "3. 哪一個指令可以用來繪製一個圓形？",
+      options: ["rect()", "line()", "triangle()", "circle()"],
+      answer: 3 // 正確答案索引 (circle)
+    },
+    {
+      question: "4. 若要更改繪圖填滿顏色，應該使用哪一個函式？",
+      options: ["fill()", "stroke()", "background()", "color()"],
+      answer: 0 // 正確答案索引 (fill)
+    },
+    {
+      question: "5. draw() 函式預設的執行頻率為何？",
+      options: ["只執行一次", "每秒執行 10 次", "每秒執行 60 次", "無限快執行"],
+      answer: 2 // 正確答案索引 (每秒約 60 次)
+    }
+  ];
+
+  // 建立「下一題」按鈕並設定樣式與點擊事件
+  nextButton = createButton("下一題");
+  nextButton.size(120, 45);
+  nextButton.style("font-size", "18px");
+  nextButton.style("cursor", "pointer");
+  nextButton.mousePressed(nextQuestion);
+  nextButton.hide(); // 初始狀態隱藏按鈕
+
+  // 建立「重新測試」按鈕
+  restartButton = createButton("再測一次");
+  restartButton.size(140, 50);
+  restartButton.style("font-size", "20px");
+  restartButton.style("cursor", "pointer");
+  restartButton.mousePressed(restartQuiz);
+  restartButton.hide(); // 初始狀態隱藏按鈕
+}
+
+function draw() {
+  // 清除背景並設定為淡灰藍色
+  background(240, 244, 248);
+
+  // 判斷是否所有題目已完成
+  if (currentQuestion < questions.length) {
+    // 繪製測驗介面
+    displayQuiz();
+  } else {
+    // 繪製最終結算畫面
+    displayResult();
+  }
+}
+
+// 繪製測驗題目的函式
+function displayQuiz() {
+  let q = questions[currentQuestion];
+
+  // 顯示當前進度與題目文字
+  fill(40);
+  noStroke();
+  textSize(24);
+  text(`第 ${currentQuestion + 1} / ${questions.length} 題`, width / 2, height * 0.15);
+  textSize(28);
+  text(q.question, width / 2, height * 0.25);
+
+  // 計算動態跳動偏移量 (利用正弦波 sin 達成平滑上下跳動效果)
+  bounceOffset = sin(frameCount * 0.1) * 8;
+
+  // 繪製 4 個選項按鈕區域
+  let optionW = min(500, width * 0.8); // 選項框寬度
+  let optionH = 50;                     // 選項框高度
+  let startY = height * 0.38;           // 第一個選項的 Y 軸起始位置
+  let spacing = 65;                     // 選項間距
+
+  for (let i = 0; i < q.options.length; i++) {
+    let x = width / 2;
+    let y = startY + i * spacing;
+
+    // 預設選項卡片樣式 (白色背景)
+    fill(255);
+    stroke(200);
+    strokeWeight(2);
+
+    // 當使用者已作答時的顏色與動畫判定
+    if (isAnswered) {
+      if (i === q.answer) {
+        if (selectedOption !== q.answer) {
+          // 答錯時：正確選項加上 #caf0f8 (RGB: 202, 240, 248) 背景，並啟用跳動
+          fill(202, 240, 248);
+          stroke(0, 150, 214);
+          y += bounceOffset; // 套用跳動偏移
+        } else {
+          // 答對時：正確選項顯示淡綠色背景
+          fill(212, 237, 218);
+          stroke(40, 167, 69);
+        }
+      } else if (i === selectedOption) {
+        // 點選到的錯誤選項：顯示淡紅色背景
+        fill(248, 215, 218);
+        stroke(220, 53, 69);
+      }
+    } else {
+      // 尚未作答時，懸停效果
+      if (mouseX > x - optionW / 2 && mouseX < x + optionW / 2 &&
+          mouseY > y - optionH / 2 && mouseY < y + optionH / 2) {
+        fill(230, 240, 255);
+      }
+    }
+
+    // 繪製選項圓角矩形框
+    rectMode(CENTER);
+    rect(x, y, optionW, optionH, 10);
+
+    // 繪製選項文字
+    fill(30);
+    noStroke();
+    textSize(20);
+    text(q.options[i], x, y);
+  }
+
+  // 若已作答，顯示「下一題」按鈕並定位在畫面下方
+  if (isAnswered) {
+    nextButton.position(width / 2 - 60, height * 0.82);
+    nextButton.show();
+  } else {
+    nextButton.hide();
+  }
+}
+
+// 畫面上滑鼠點擊判定事件
+function mousePressed() {
+  // 如果已經回答或測驗已結束，則不處理選項點擊
+  if (isAnswered || currentQuestion >= questions.length) return;
+
+  let optionW = min(500, width * 0.8);
+  let optionH = 50;
+  let startY = height * 0.38;
+  let spacing = 65;
+
+  // 檢查是否點擊了 4 個選項之一
+  for (let i = 0; i < 4; i++) {
+    let x = width / 2;
+    let y = startY + i * spacing;
+
+    if (mouseX > x - optionW / 2 && mouseX < x + optionW / 2 &&
+        mouseY > y - optionH / 2 && mouseY < y + optionH / 2) {
+      selectedOption = i;
+      isAnswered = true;
+
+      // 若答對則累計分數
+      if (i === questions[currentQuestion].answer) {
+        score++;
+      }
+      break;
+    }
+  }
+}
+
+// 切換至下一題的邏輯
+function nextQuestion() {
+  currentQuestion++;      // 題號加 1
+  selectedOption = -1;     // 重置點選選項
+  isAnswered = false;     // 重置作答狀態
+  nextButton.hide();      // 隱藏下一題按鈕
+}
+
+// 繪製測驗結束後的結算畫面
+function displayResult() {
+  nextButton.hide(); // 隱藏下一題按鈕
+
+  fill(40);
+  noStroke();
+  textSize(36);
+  text("測驗完成！", width / 2, height * 0.35);
+
+  textSize(28);
+  text(`你的總得分為：${score} / ${questions.length} 題`, width / 2, height * 0.48);
+
+  // 顯示重新測試按鈕
+  restartButton.position(width / 2 - 70, height * 0.6);
+  restartButton.show();
+}
+
+// 重新開始測驗
+function restartQuiz() {
+  currentQuestion = 0;
+  score = 0;
+  selectedOption = -1;
+  isAnswered = false;
+  restartButton.hide();
+}
+
+// 當瀏覽器視窗大小改變時自動調整畫布尺寸
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
